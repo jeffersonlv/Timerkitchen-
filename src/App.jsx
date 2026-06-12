@@ -32,8 +32,9 @@ const STRINGS = {
     sec1Title: 'Cadastro de item',
     namePlaceholder: 'Nome do item (ex: Arroz)',
     minPlaceholder: 'min', secPlaceholder: 'seg',
-    splitLabel: 'Split (bipe na metade)',
-    splitDesc: 'Toca um som ao passar metade do tempo do item',
+    flipLabel: 'Flip (bipe na metade)',
+    flipDesc: 'Toca um som ao passar metade do tempo do item',
+    flipBadge: 'flip', flippedBadge: 'flipado ✓',
     addBtn: '+ Adicionar ao catálogo',
     sec2Title: 'Lista de itens',
     emptyList: 'Nenhum item cadastrado ainda.',
@@ -68,8 +69,9 @@ const STRINGS = {
     sec1Title: 'Add item',
     namePlaceholder: 'Item name (e.g. Rice)',
     minPlaceholder: 'min', secPlaceholder: 'sec',
-    splitLabel: 'Split (beep at halfway)',
-    splitDesc: 'Plays a sound at the halfway point of this item',
+    flipLabel: 'Flip (beep at halfway)',
+    flipDesc: 'Plays a sound at the halfway point of this item',
+    flipBadge: 'flip', flippedBadge: 'flipped ✓',
     addBtn: '+ Add to catalog',
     sec2Title: 'Item list',
     emptyList: 'No items added yet.',
@@ -344,18 +346,34 @@ export default function App() {
       <div className="cs-board">
         {b.items.map((it) => {
           const startAt = sch.totalSec - it.totalSec;
-          let cls = 'wait', stat;
-          if (finished || el >= sch.totalSec) { cls = 'dn'; stat = t('cardDone'); }
-          else if (el < startAt) { cls = it.id === nextStartId ? 'next' : 'wait'; stat = `${t('cardStartsIn')} ${fmt(startAt - el)}`; }
-          else { cls = 'run'; stat = `${fmt(rem)} ${t('cardLeft')}`; }
+          let cls = 'wait', stat, progress = 0;
+          if (finished || el >= sch.totalSec) {
+            cls = 'dn'; stat = t('cardDone'); progress = 1;
+          } else if (el < startAt) {
+            cls = it.id === nextStartId ? 'next' : 'wait';
+            stat = `${t('cardStartsIn')} ${fmt(startAt - el)}`;
+            progress = 0;
+          } else {
+            cls = 'run';
+            stat = `${fmt(rem)} ${t('cardLeft')}`;
+            progress = Math.min(1, (el - startAt) / it.totalSec);
+          }
+          const flipped = it.split && cls === 'run' && progress >= 0.5;
           return (
             <div className={'cs-card ' + cls} key={it.id}>
               <div className="cnm">{it.name}</div>
               <div className="cb">
                 <span className="ctime">{fmt(it.totalSec)}</span>
-                {it.split && <span className="cs-badge">split</span>}
+                {it.split && (
+                  <span className={'cs-badge' + (flipped ? ' flipped' : '')}>
+                    {flipped ? t('flippedBadge') : t('flipBadge')}
+                  </span>
+                )}
               </div>
               <div className="cstat">{stat}</div>
+              <div className="cs-card-progress">
+                <div className="fill" style={{ width: `${progress * 100}%` }} />
+              </div>
             </div>
           );
         })}
@@ -482,6 +500,19 @@ export default function App() {
     .cs-toast .k{ font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--mut); }
     .cs-toast .m{ font-family:'Syne'; font-weight:800; font-size:19px; margin-top:3px; }
     .cs-toast.start .m{ color:var(--mint); } .cs-toast.split .m{ color:var(--blue); } .cs-toast.done .m{ color:var(--green); }
+
+    .cs-badge.flipped{ border-color:var(--amber); color:var(--amber); }
+
+    .cs-leva-progress{ height:5px; border-radius:3px; background:var(--bd); margin:8px 0 10px; overflow:hidden; }
+    .cs-leva-progress .fill{ height:100%; border-radius:3px; transition:width .25s linear; }
+    .cs-leva.running .cs-leva-progress .fill{ background:var(--mint); }
+    .cs-leva.paused .cs-leva-progress .fill{ background:var(--amber); }
+
+    .cs-card-progress{ height:4px; border-radius:2px; background:var(--bd); margin-top:8px; overflow:hidden; }
+    .cs-card-progress .fill{ height:100%; border-radius:2px; transition:width .25s linear; }
+    .cs-card.run .cs-card-progress .fill{ background:var(--mint); }
+    .cs-card.next .cs-card-progress .fill{ background:var(--amber); opacity:.5; }
+    .cs-card.dn .cs-card-progress .fill{ background:var(--green); }
   `;
 
   return (
@@ -519,7 +550,7 @@ export default function App() {
                   <input className="cs-inp" placeholder={t('secPlaceholder')} inputMode="numeric" value={sec} onKeyDown={onFormKey} onChange={(e) => setSec(e.target.value.replace(/\D/g, ''))} />
                 </div>
                 <div className="cs-splitrow">
-                  <div className="t">{t('splitLabel')}<small>{t('splitDesc')}</small></div>
+                  <div className="t">{t('flipLabel')}<small>{t('flipDesc')}</small></div>
                   <div className={'cs-switch' + (split ? ' on' : '')} onClick={() => setSplit((s) => !s)} role="switch" aria-checked={split}><span className="knob" /></div>
                 </div>
                 <button className="cs-add" onClick={addItem} disabled={!name.trim()}>{t('addBtn')}</button>
@@ -544,7 +575,7 @@ export default function App() {
                         <div className={'cs-litem' + (on ? ' staged' : '')} key={c.id}>
                           <div>
                             <div className="nm">{c.name}</div>
-                            <div className="meta"><span className="cs-time">{fmt(c.totalSec)}</span>{c.split && <span className="cs-badge">split</span>}</div>
+                            <div className="meta"><span className="cs-time">{fmt(c.totalSec)}</span>{c.split && <span className="cs-badge">{t('flipBadge')}</span>}</div>
                           </div>
                           <div className="cs-row-btns">
                             <button className={'cs-stagebtn' + (on ? ' on' : '')} onClick={() => toggleStage(c.id)}>
@@ -580,7 +611,7 @@ export default function App() {
                         {stagedItems.map((c) => (
                           <div className="cs-card" key={c.id}>
                             <div className="cnm">{c.name}</div>
-                            <div className="cb"><span className="ctime">{fmt(c.totalSec)}</span>{c.split && <span className="cs-badge">split</span>}</div>
+                            <div className="cb"><span className="ctime">{fmt(c.totalSec)}</span>{c.split && <span className="cs-badge">{t('flipBadge')}</span>}</div>
                             <div className="cstat">{t('startsIn')}{fmt(stagedSchedule.totalSec - c.totalSec)}</div>
                           </div>
                         ))}
@@ -619,6 +650,9 @@ export default function App() {
                             <div className="cs-leva-state">{b.status === 'running' ? t('stateRunning') : t('statePaused')}</div>
                           </div>
                           <div className="cs-leva-time">{fmt(rem)}</div>
+                        </div>
+                        <div className="cs-leva-progress">
+                          <div className="fill" style={{ width: `${Math.min(100, (el / sch.totalSec) * 100)}%` }} />
                         </div>
                         {nx && b.status === 'running' && (
                           <div className="cs-leva-next">{t('nextLabel')} {evLabel(nx)} {t('inLabel')} <b>{fmt(nx.at - el)}</b></div>
