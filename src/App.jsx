@@ -596,10 +596,8 @@ export default function App() {
           )}
         </div>
 
-        {/* 3 + 4 SIDE-BY-SIDE */}
-        <div className="cs-pair">
-          {/* 3. BOARD */}
-          <div className="cs-sec">
+        {/* 3. BOARD */}
+        <div className="cs-sec">
             {secHead('--amber', t('sec3Title'), stagedItems.length, 'board')}
             {!collapsed.board && (
               <div className="cs-panel">
@@ -629,8 +627,8 @@ export default function App() {
             )}
           </div>
 
-          {/* 4. RUNNING */}
-          <div className="cs-sec">
+        {/* 4. RUNNING */}
+        <div className="cs-sec">
             {secHead('--mint', t('sec4Title'), active.length, 'running')}
             {!collapsed.running && (
               <div className="cs-panel">
@@ -675,7 +673,6 @@ export default function App() {
               </div>
             )}
           </div>
-        </div>
 
         {/* 5. DONE */}
         <div className="cs-sec">
