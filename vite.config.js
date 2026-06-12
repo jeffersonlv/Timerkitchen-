@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: '/Timerkitchen/',
+  base: '/Timerkitchen-/',
   plugins: [
     react(),
     VitePWA({
@@ -18,7 +18,8 @@ export default defineConfig({
         background_color: '#0b0d13',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/Timerkitchen/',
+        start_url: '/Timerkitchen-/',
+        scope: '/Timerkitchen-/',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           {
