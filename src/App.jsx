@@ -175,11 +175,26 @@ export default function App() {
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
   const { play, ensure } = useAudio(soundRef);
 
+  const [soundMode, setSoundMode] = useState('beep');
+  const soundModeRef = useRef(soundMode);
+  useEffect(() => { soundModeRef.current = soundMode; }, [soundMode]);
+
   const [lang, setLang] = useState('pt');
+  const langRef = useRef(lang);
+  useEffect(() => { langRef.current = lang; }, [lang]);
   const t = useCallback((key, arg) => {
     const val = STRINGS[lang][key];
     return typeof val === 'function' ? val(arg) : val;
   }, [lang]);
+
+  const speak = useCallback((text) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = langRef.current === 'pt' ? 'pt-BR' : 'en-US';
+    utt.rate = 1.05;
+    window.speechSynthesis.speak(utt);
+  }, []);
 
   const [collapsed, setCollapsed] = useState({ cadastro: false, lista: false, board: false, running: false, done: false });
   const toggleCollapse = (key) => setCollapsed((c) => ({ ...c, [key]: !c[key] }));
@@ -212,6 +227,7 @@ export default function App() {
         setSeq(s.seq || (bs.length + 1));
         if (s.lang) setLang(s.lang);
         if (s.collapsed) setCollapsed(s.collapsed);
+        if (s.soundMode) setSoundMode(s.soundMode);
       }
       if (alive) setLoaded(true);
     })();
@@ -219,8 +235,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (loaded) saveState({ catalog, staged, batches, seq, lang, collapsed });
-  }, [catalog, staged, batches, seq, loaded, lang, collapsed]);
+    if (loaded) saveState({ catalog, staged, batches, seq, lang, collapsed, soundMode });
+  }, [catalog, staged, batches, seq, loaded, lang, collapsed, soundMode]);
 
   useEffect(() => {
     if (!batches.some((b) => b.status === 'running')) return;
@@ -235,7 +251,18 @@ export default function App() {
         const fired = firedRef.current[b.id] || (firedRef.current[b.id] = new Set());
         sch.events.forEach((ev) => {
           if (el >= ev.at && !fired.has(ev.id)) {
-            fired.add(ev.id); play(ev.type);
+            fired.add(ev.id);
+            if (soundRef.current) {
+              if (soundModeRef.current === 'voice') {
+                const S = STRINGS[langRef.current];
+                const txt = ev.type === 'done'
+                  ? `${b.label}: ${S.evDone}`
+                  : `${b.label}: ${ev.type === 'start' ? S.evStart(ev.name) : S.evSplit(ev.name)}`;
+                speak(txt);
+              } else {
+                play(ev.type);
+              }
+            }
             setFlash({ ...ev, leva: b.label, ts });
           }
         });
@@ -402,6 +429,7 @@ export default function App() {
     .cs-soundbtn b{ color:var(--amber); font-weight:600; }
     .cs-langbtn{ background:var(--surf2); border:1px solid var(--bd); color:var(--tx); border-radius:999px; padding:8px 15px; font-size:13px; cursor:pointer; font-family:'Sora'; }
     .cs-langbtn b{ color:var(--blue); font-weight:700; }
+    .cs-modbtn{ background:var(--surf2); border:1px solid var(--bd); color:var(--tx); border-radius:999px; padding:8px 15px; font-size:13px; cursor:pointer; font-family:'Sora'; }
 
     .cs-summary{ border:1px solid var(--bd); border-radius:14px; background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.16)), var(--surf);
       padding:13px 16px; margin-bottom:22px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
@@ -523,6 +551,11 @@ export default function App() {
           <h1 className="cs-title">{t('appTitle')} <span>{t('appTitleSpan')}</span></h1>
           <div className="cs-head-btns">
             <button className="cs-langbtn" onClick={() => setLang((l) => l === 'pt' ? 'en' : 'pt')}><b>{t('langBtn')}</b></button>
+            {soundOn && (
+              <button className="cs-modbtn" onClick={() => setSoundMode((m) => m === 'beep' ? 'voice' : 'beep')}>
+                {soundMode === 'beep' ? '🔔 Bip' : '🗣️ Voz'}
+              </button>
+            )}
             <button className="cs-soundbtn" onClick={() => setSoundOn((s) => !s)}>🔊 {t('soundLabel')} <b>{soundOn ? t('soundOn') : t('soundOff')}</b></button>
           </div>
         </div>
